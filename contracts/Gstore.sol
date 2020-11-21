@@ -16,7 +16,7 @@ contract GRT is ERC777 {
 abstract contract GMart is IERC777Recipient{
     
     // Implementing an ERC777 token - enabling more token information
-    
+    //Declaring sets of global variables.
     using EnumerableMap for EnumerableMap.UintToAddressMap;
     
     IERC1820Registry private _erc1820 = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
@@ -29,17 +29,18 @@ abstract contract GMart is IERC777Recipient{
     uint8 defaultId = 10;
     uint8 defaultId_storeOwner = 0;
     uint public totalStorefronts = 0;
+    uint shoppers_count;
     
     enum ItemStatus{Unavailable, Available}
     ItemStatus available = ItemStatus(1);
     ItemStatus unavailable = ItemStatus(0);
     
-    
+    //Struct of admin specs.
     struct Admins {
         address addr;
         bytes id;
     }
-    
+    //Struct of StoreOwners specs
     struct StoreOwners{
         address addr;
         bytes id;
@@ -55,7 +56,7 @@ abstract contract GMart is IERC777Recipient{
         uint storecount;
         uint itemCount;
     }
-    
+    //Struct of item specs
     struct Item {
         string name;
         uint price;
@@ -65,10 +66,6 @@ abstract contract GMart is IERC777Recipient{
         ItemStatus status;
         bytes description;
         uint itemCountId;
-    }
-
-    struct Shoppers {
-        mapping(address => Shoppers[]) shoppers;
     }
     
     Admins[] public adminList;
@@ -104,31 +101,9 @@ abstract contract GMart is IERC777Recipient{
     mapping(address => mapping(bytes => bytes)) itemHashMap;
     mapping(bytes => bool) itemExist;
     mapping(address => uint256) public balance;
-    // mapping(address => mapping(bytes => bool)) item
-    
-    
-    
-    
-    
-    
-    // mapping(address => StoreOwners) storeowners;
-    
-    
-    
-    
-    
+    mapping(address => uint256) public shoppers;
+
     EnumerableMap.UintToAddressMap private store_list;
-    
-    
-    // mapping(address => EnergyStream[]) public buyItem;
-    
-    // mapping(bytes => StreamRef[]) public bids;
-    // mapping(bytes => uint) public bids_acquired; // bytes is concatenation of seller - buyer - id offer - id ask
-    
-    // mapping(bytes => bytes) public accepted;
-    // mapping(bytes => bool) public done;
-    
-    // Market currentMarket;
     
     // Initialized at deployment time.
     constructor (address _token, address _owner) public {
@@ -137,29 +112,33 @@ abstract contract GMart is IERC777Recipient{
         _erc1820.setInterfaceImplementer(address(this), TOKENS_RECIPIENT_INTERFACE_HASH, address(this));
         
     }
-
+    //Only sender with owner Authorization is permiitted
     modifier onlyOwner() {
         require(msg.sender == owner, "Request failed; Not an owner");
         _;
     }
-    
+    //Only sender with admin role is permiitted
     modifier onlyAdmin() {
         require(isAdmin[msg.sender] == true, "Not Authorized address");
         require(adminApprovalToAdd[msg.sender] == true, "Not Authorized");
         _;
     }
-    
+    //Only approved store owner is allowed
     modifier approvedStoreOwner() {
         require(isStoreOwnerApproved[msg.sender] == true, "Address not authorized");
         require(storeOwnerApprovalToAddItem[msg.sender] == true, "Unauthorized to add Item to store");
         _;
     }
-    
+    //Check if an item exist in a particular storefront
     modifier checkItemExist(bytes memory _itemRef) {
         require(itemExist[_itemRef] == true, "Item does not exist");
         _;
     }
     
+    /**
+     * @dev adds an adminList
+     * function is called only by the authorized owner address
+     */
     function addAdmin(address _addr, bool _approval) public onlyOwner returns(bool successful){
         require(adminList.length <= 3, "Max admin list reached");
         require(_addr != address(0), "Invalid address");
@@ -355,6 +334,7 @@ abstract contract GMart is IERC777Recipient{
             }else if(prevQuanty > 0){
                 _itemToBuy.quantity = prevQuanty;
             }
+            shoppers[msg.sender] = shoppers_count += 1;
      }
      
     function withdrawBalanceStoreOwner(address payable _addr, uint _amount) external payable approvedStoreOwner returns(bool success) {
