@@ -8,5 +8,16 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bobeu/consensys-finalProject.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bobeu/consensys-finalProject/issues"
+  },
+  "homepage": "https://github.com/bobeu/consensys-finalProject#readme",
+  "directories": {
+    "test": "test"
+  }
 }
