@@ -1,34 +1,34 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
-import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v3.2.0/contracts/utils/EnumerableMap.sol";
-import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v3.2.0/contracts/introspection/IERC1820Registry.sol";
-import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v3.2.0/contracts/token/ERC777/IERC777Recipient.sol";
-import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v3.2.0/contracts/token/ERC777/ERC777.sol";
+// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v3.2.0/contracts/utils/EnumerableMap.sol";
+// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v3.2.0/contracts/introspection/IERC1820Registry.sol";
+// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v3.2.0/contracts/token/ERC777/IERC777Recipient.sol";
+// // import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v3.2.0/contracts/token/ERC777/ERC777.sol";
 
-contract GRT is ERC777 {
-    constructor (address[] memory owner, string memory _name, string memory _symbol) ERC777(_name, _symbol, owner) public{
-        _mint(owner[1], 50000000000000000000000000, bytes(""), bytes(""));
-    }
-}
+// contract GRT is ERC777 {
+//     constructor (address[] memory owner, string memory _name, string memory _symbol) ERC777(_name, _symbol, owner) public{
+//         _mint(owner[1], 50000000000000000000000000, bytes(""), bytes(""));
+//     }
+// }
 
 // Online MarketPlace running on the blockchain
-abstract contract GMart is IERC777Recipient{
+contract GMart{
     
     // Implementing an ERC777 token - enabling more token information
     //Declaring sets of global variables.
-    using EnumerableMap for EnumerableMap.UintToAddressMap;
+    // using EnumerableMap for EnumerableMap.UintToAddressMap;
     
-    IERC1820Registry private _erc1820 = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
-    bytes32 constant private TOKENS_RECIPIENT_INTERFACE_HASH = keccak256("ERC777TokensRecipient");
+    // IERC1820Registry private _erc1820 = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
+    // bytes32 constant private TOKENS_RECIPIENT_INTERFACE_HASH = keccak256("ERC777TokensRecipient");
     
-    IERC777 token;
+    // IERC777 token;
     
     address private owner;
     uint totalItem = 0;
     uint8 defaultId = 10;
     uint8 defaultId_storeOwner = 0;
-    uint public totalStorefronts = 0;
+    // uint public totalStorefronts = 0;
     uint shoppers_count;
     
     enum ItemStatus{Unavailable, Available}
@@ -71,7 +71,7 @@ abstract contract GMart is IERC777Recipient{
     Admins[] public adminList;
     StoreOwners[] public storeOwnerslist;
     Storefront[] storesList;
-    Item[] public allItem;
+    Item[] public itemList;
 
     event ApprovedStoreOwner(address indexed _addr, bytes _ref);
     event NewAdmin(address indexed _addr, bytes _ref);
@@ -84,9 +84,9 @@ abstract contract GMart is IERC777Recipient{
     event ReceivedEther(address, uint);
     
 
-    mapping(address => bool) isAdmin;
+    mapping(address => bool) public  isAdmin;
     mapping(address => Admins) adminMap;
-    mapping(address => bool) adminApprovalToAdd;
+    mapping(address => bool) public adminApprovalToAdd;
     mapping(address => bool) public isStoreOwnerApproved;
     mapping(address => StoreOwners) storeOwnerMap;
     mapping(address => bool) public storeOwnerApprovalToAddItem;//marked
@@ -103,13 +103,13 @@ abstract contract GMart is IERC777Recipient{
     mapping(address => uint256) public balance;
     mapping(address => uint256) public shoppers;
 
-    EnumerableMap.UintToAddressMap private store_list;
+    // EnumerableMap.UintToAddressMap private store_list;
     
     // Initialized at deployment time.
-    constructor (address _token, address _owner) public {
-        token = IERC777(_token);
-        owner = _owner;
-        _erc1820.setInterfaceImplementer(address(this), TOKENS_RECIPIENT_INTERFACE_HASH, address(this));
+    constructor () public {
+        // token = IERC777(_token);
+        owner = msg.sender;
+        // _erc1820.setInterfaceImplementer(address(this), TOKENS_RECIPIENT_INTERFACE_HASH, address(this));
         
     }
     //Only sender with owner Authorization is permiitted
@@ -147,12 +147,8 @@ abstract contract GMart is IERC777Recipient{
         _adminStruct.addr = _addr;
         _adminStruct.id = abi.encode(_addr, tempAdminId);
         adminList.push(_adminStruct);
-        if(_approval == true){
-            adminApprovalToAdd[_addr] = _approval;
-        }else if(_approval == false){
-            adminApprovalToAdd[_addr] = _approval;
-        }
-        isAdmin[msg.sender] = true;
+        adminApprovalToAdd[_addr] = _approval;
+        isAdmin[_addr] = true;
         emit NewAdmin(_addr, _adminStruct.id);
         return successful;
     }
@@ -164,34 +160,20 @@ abstract contract GMart is IERC777Recipient{
         _ownerStruct.addr = _addr;
         _ownerStruct.id = abi.encode(_addr, tempId);
         storeOwnerslist.push(_ownerStruct);
-        if(_approval == true){
-            storeOwnerApprovalToAddItem[_addr] = _approval;
-        }else if(_approval == false){
-            storeOwnerApprovalToAddItem[_addr] = _approval;
-        }
+        storeOwnerApprovalToAddItem[_addr] = _approval;
         isStoreOwnerApproved[_addr] = true;
         emit ApprovedStoreOwner(_addr, _ownerStruct.id);
         return successful;
     }
     
-    function changeAdminApproval(address _addr, bool _approval) public onlyOwner returns(bool){
+    function changeAdminApproval(address _addr, bool _approval) public onlyOwner {
         require(isAdmin[_addr] == true, "Not already added");
-        if(_approval == true){
-            adminApprovalToAdd[_addr] == _approval;
-        }else if(_approval == false){
-            adminApprovalToAdd[_addr] = _approval;
-        }
-        return true;
+        adminApprovalToAdd[_addr] == _approval;
     }
     
-    function changeStoreOwnerApproval(address _addr, bool _approval) public onlyAdmin returns(bool){
+    function changeStoreOwnerApproval(address _addr, bool _approval) public onlyAdmin {
         require(isStoreOwnerApproved[_addr] == true, "Not already added");
-        if(_approval == true){
-            storeOwnerApprovalToAddItem[_addr] == _approval;
-        }else if(_approval == false){
-            storeOwnerApprovalToAddItem[_addr] = _approval;
-        }
-        return true;
+        storeOwnerApprovalToAddItem[_addr] == _approval;
     }
 
     /**
@@ -207,31 +189,30 @@ abstract contract GMart is IERC777Recipient{
     function addStorefront(
          string memory _storeName,
          string memory _itemName,
-         bytes memory _description,
+         string memory _description,
          uint _price,
-         bytes memory _storeref,
          uint _quantity
          ) public approvedStoreOwner returns(bool success) {
          Storefront memory _newStoreFront;
          Item memory _newItem;
          bytes memory _storeRef = abi.encode(msg.sender, _storeName);
-         require(ifStorefAvailable[msg.sender][_storeref] == false, "Store already exist" );
-         require(storeMap[msg.sender][_storeref].length < 3, "Address can only create two storefront");
+         require(ifStorefAvailable[msg.sender][_storeRef] == false, "Store already exist" );
+         require(storeMap[msg.sender][_storeRef].length < 3, "Address can only create two storefront");
          _newStoreFront.dateCreated = block.timestamp - 15;
          _newStoreFront.name = _storeName;
          _newStoreFront.storeOwner = msg.sender;
-         _newStoreFront.storeref = _storeref;
+         _newStoreFront.storeref = _storeRef;
          _newStoreFront.active = true;
          if(_newStoreFront.itemCount == 0){
-             _newItem = addItemToStore(_itemName, _description, _price, _storeref, _quantity);
+             _newItem = addItemToStore(_itemName, _description, _price, _storeRef, _quantity);
              _newStoreFront.storecount += 1;
          }
         //  require(_newStoreFront.shelve.length > 0, "Shelve cannot be empty");
          storeMap[msg.sender][_storeRef].push(_newStoreFront);
-         ifStorefAvailable[msg.sender][_storeref] = true;
+         ifStorefAvailable[msg.sender][_storeRef] = true;
          storef[msg.sender] = _storeRef;
          storeHashMap[_storeRef] = _newStoreFront;
-         emit NewStoreFront(msg.sender, _storeref, _itemName);
+         emit NewStoreFront(msg.sender, _storeRef, _itemName);
          return success;
         
      }
@@ -261,7 +242,7 @@ abstract contract GMart is IERC777Recipient{
      
     function addItemToStore(
         string memory _itemName,
-        bytes memory _description,
+        string memory _description,
         uint _price,
         bytes memory _storeRef,
         uint _qnty
@@ -276,11 +257,11 @@ abstract contract GMart is IERC777Recipient{
             _newItem.itemCountId += 1;
             bytes memory _itemref = abi.encode(msg.sender, _newItem.itemCountId, _itemName, _price, _description);
             _newItem.sellerAddress = msg.sender;
+            _newItem.itemRef = _itemref;
             itemcount[msg.sender][_newItem.itemCountId] = _newItem;
-            // _newStoreFront.shelve[_itemref](_newItem);
             ownerShip[msg.sender][_itemref] = true;
             _newItem.status = available;
-            allItem.push(_newItem);
+            itemList.push(_newItem);
             itemMap[msg.sender][_itemref] = (_newItem);
             itemRefMap[_itemref] = _newItem;
             itemHashMap[msg.sender][_storeRef] = _itemref;
