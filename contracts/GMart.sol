@@ -1,29 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
-// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v3.2.0/contracts/utils/EnumerableMap.sol";
-// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v3.2.0/contracts/introspection/IERC1820Registry.sol";
-// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v3.2.0/contracts/token/ERC777/IERC777Recipient.sol";
-// // import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v3.2.0/contracts/token/ERC777/ERC777.sol";
-
-// contract GRT is ERC777 {
-//     constructor (address[] memory owner, string memory _name, string memory _symbol) ERC777(_name, _symbol, owner) public{
-//         _mint(owner[1], 50000000000000000000000000, bytes(""), bytes(""));
-//     }
-// }
-
 // Online MarketPlace running on the blockchain
 contract GMart{
-    
-    // Implementing an ERC777 token - enabling more token information
-    //Declaring sets of global variables.
-    // using EnumerableMap for EnumerableMap.UintToAddressMap;
-    
-    // IERC1820Registry private _erc1820 = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
-    // bytes32 constant private TOKENS_RECIPIENT_INTERFACE_HASH = keccak256("ERC777TokensRecipient");
-    
-    // IERC777 token;
-    
     address private owner;
     uint totalItem = 0;
     uint8 defaultId = 10;
@@ -75,10 +54,10 @@ contract GMart{
 
     event ApprovedStoreOwner(address indexed _addr, bytes _ref);
     event NewAdmin(address indexed _addr, bytes _ref);
-    event NewStoreFront(address indexed _newstore, bytes indexed _storeId, string _name);
+    event NewStoreFront(address indexed _newstore, bytes _storeId, string _name);
     event UnregisteredStore(address indexed _storeOwnerAddress);
-    event NewItem(address indexed _addr, string indexed _itemName, bytes _itemRef);
-    event PriceChange(bytes indexed _referenceId, uint256 _newSetPrice);
+    event NewItem(address indexed _addr, string _itemName, bytes _itemRef);
+    event PriceChange(bytes _referenceId, uint256 _newSetPrice);
     event Withdrawal(address indexed _from, address indexed _to, uint _amount);
     event RemovedItem(address indexed _msgsender, bytes _refId);
     event ReceivedEther(address, uint);
@@ -96,7 +75,7 @@ contract GMart{
     mapping(bytes => Storefront) storeHashMap;
     mapping(address => mapping(bytes => Item)) public itemMap;
     mapping(address => mapping(uint => Item)) itemcount;
-    mapping(bytes => Item) public itemRefMap;
+    mapping(bytes => Item) itemRefMap;
     mapping(address => mapping(bytes => bool)) public ownerShip;
     mapping(address => mapping(bytes => bytes)) itemHashMap;
     mapping(bytes => bool) itemExist;
@@ -168,12 +147,12 @@ contract GMart{
     
     function changeAdminApproval(address _addr, bool _approval) public onlyOwner {
         require(isAdmin[_addr] == true, "Not already added");
-        adminApprovalToAdd[_addr] == _approval;
+        adminApprovalToAdd[_addr] = _approval;
     }
     
     function changeStoreOwnerApproval(address _addr, bool _approval) public onlyAdmin {
         require(isStoreOwnerApproved[_addr] == true, "Not already added");
-        storeOwnerApprovalToAddItem[_addr] == _approval;
+        storeOwnerApprovalToAddItem[_addr] = _approval;
     }
 
     /**
@@ -300,10 +279,13 @@ contract GMart{
             require(balance[msg.sender] >= buyUnitPrice, "Insufficeient balance");
             require(_itemToBuy.status == available, "Item Unavailable");
             require(_qnty <= _itemToBuy.quantity, "Cannot exceed seller's preset amount.");
-            uint amountToPay = _qnty * buyUnitPrice;
+            if (_qnty == 0) {
+              revert();
+            }
+            uint256 amountToPay = _qnty * buyUnitPrice;
+            require(amountToPay / _qnty == buyUnitPrice);
             balance[msg.sender] -= amountToPay;
             balance[_sellerAddress] += amountToPay;
-            // itemMap[_itemRef].status = _available + 1;
             ownerShip[_sellerAddress][_itemRef] = false;
             ownerShip[msg.sender][_itemRef] = true;
             uint prevQuanty = _itemToBuy.quantity;
