@@ -1,5 +1,5 @@
-const Migrations = artifacts.require("Migrations");
+const GMart = artifacts.require("GMart.sol");
 
 module.exports = function (deployer) {
-  deployer.deploy(Migrations);
+  deployer.deploy(GMart);
 };
