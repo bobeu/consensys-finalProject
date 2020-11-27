@@ -118,7 +118,7 @@ contract GMart{
      * @dev adds an adminList
      * function is called only by the authorized owner address
      */
-    function addAdmin(address _addr, bool _approval) public onlyOwner returns(bool successful){
+    function addAdmin(address _addr, bool _approval) public onlyOwner returns(bool){
         require(adminList.length <= 3, "Max admin list reached");
         require(_addr != address(0), "Invalid address");
         Admins memory _adminStruct = adminMap[_addr];
@@ -129,7 +129,15 @@ contract GMart{
         adminApprovalToAdd[_addr] = _approval;
         isAdmin[_addr] = true;
         emit NewAdmin(_addr, _adminStruct.id);
-        return successful;
+        return true;
+    }
+
+    function checkIsAdmin(address _addr) public view returns(bool, bool) {
+        return (isAdmin[_addr], adminApprovalToAdd[_addr]);
+    }
+
+    function checkStoreOwnerApproved(address _addr) public view returns(bool, bool) {
+        return (isStoreOwnerApproved[_addr], storeOwnerApprovalToAddItem[_addr]);
     }
     
     function approve_StoreOwner(address payable _addr, bool _approval) public onlyAdmin returns(bool successful) {

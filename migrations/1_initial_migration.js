@@ -1,5 +1,5 @@
-const GMart = artifacts.require("GMart.sol");
+var GMart = artifacts.require("./GMart.sol");
 
-module.exports = function (deployer) {
+module.exports = function(deployer) {
   deployer.deploy(GMart);
 };
