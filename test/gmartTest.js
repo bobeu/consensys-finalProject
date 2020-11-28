@@ -2,14 +2,12 @@ const GMart = artifacts.require("./GMart.sol");
 
 contract("GMart", accounts => {
   it("...should change an admin approval to add.", async () => {
-    const gmartinstance = await GMart.deployed();
-
+    const ginstance = await GMart.deployed();
+    // const owner = "0x5B38Da6a701c568545dCfcB03FcB875f56beddC4";
     // Set aapproval for an admin to true.
-    await gmartinstance.changeAdminApproval(accounts[1], true, { from: accounts[0] });
-    // Get stored value
-    const storedData = await gmartinstance.get.call(adminApprovalToAdd(accounts[1]));
-
-    assert.equal(storedData, true, "The approval was not changed.");
+    await ginstance.addAdmin(accounts[2], true, {from: accounts[3]});
+    const actual = await ginstance.changeAdminApproval(accounts[2], false, { from: accounts[3]});
+    assert.equal(actual, true, "The approval was not changed. It should return true.");
   });
 });
 

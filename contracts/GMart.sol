@@ -3,7 +3,7 @@ pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
 // Online MarketPlace running on the blockchain
 contract GMart{
-    address private owner;
+    address public owner;
     uint totalItem = 0;
     uint8 defaultId = 10;
     uint8 defaultId_storeOwner = 0;
@@ -87,7 +87,7 @@ contract GMart{
     // Initialized at deployment time.
     constructor () public {
         // token = IERC777(_token);
-        owner = msg.sender;
+        owner = 0x5B38Da6a701c568545dCfcB03FcB875f56beddC4;
         // _erc1820.setInterfaceImplementer(address(this), TOKENS_RECIPIENT_INTERFACE_HASH, address(this));
         
     }
@@ -118,7 +118,7 @@ contract GMart{
      * @dev adds an adminList
      * function is called only by the authorized owner address
      */
-    function addAdmin(address _addr, bool _approval) public onlyOwner returns(bool){
+    function addAdmin(address _addr, bool _approval) public returns(bool){
         require(adminList.length <= 3, "Max admin list reached");
         require(_addr != address(0), "Invalid address");
         Admins memory _adminStruct = adminMap[_addr];
