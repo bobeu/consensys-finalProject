@@ -87,7 +87,7 @@ contract GMart{
     // Initialized at deployment time.
     constructor () public {
         // token = IERC777(_token);
-        owner = 0x5B38Da6a701c568545dCfcB03FcB875f56beddC4;
+        owner = 0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2;
         // _erc1820.setInterfaceImplementer(address(this), TOKENS_RECIPIENT_INTERFACE_HASH, address(this));
         
     }
@@ -118,7 +118,7 @@ contract GMart{
      * @dev adds an adminList
      * function is called only by the authorized owner address
      */
-    function addAdmin(address _addr, bool _approval) public returns(bool){
+    function addAdmin(address _addr, bool _approval) public onlyOwner returns(bool){
         require(adminList.length <= 3, "Max admin list reached");
         require(_addr != address(0), "Invalid address");
         Admins memory _adminStruct = adminMap[_addr];

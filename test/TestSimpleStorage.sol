@@ -10,7 +10,7 @@ contract TestGMart {
   GMart gmartInstance = GMart(DeployedAddresses.GMart());
 
   constructor () public {
-    owner = msg.sender;
+    owner = 0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2;
   }
 
   modifier onlyOwner() {
@@ -25,7 +25,7 @@ contract TestGMart {
     Assert.equal(actual_1, expected, "This test should fail by returning false.");
   }
 
-  function testAddAmdin() public {
+  function testAddAmdin() public onlyOwner {
     bool actual = gmartInstance.addAdmin(admin, true);
     bool expected = true;
     Assert.equal(actual, expected, "Should return true when an admin is added");

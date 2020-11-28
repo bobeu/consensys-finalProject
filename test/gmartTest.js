@@ -3,7 +3,6 @@ const GMart = artifacts.require("./GMart.sol");
 contract("GMart", accounts => {
   it("...should change an admin approval to add.", async () => {
     const ginstance = await GMart.deployed();
-    // const owner = "0x5B38Da6a701c568545dCfcB03FcB875f56beddC4";
     // Set aapproval for an admin to true.
     await ginstance.addAdmin(accounts[2], true, {from: accounts[3]});
     const actual = await ginstance.changeAdminApproval(accounts[2], false, { from: accounts[3]});
