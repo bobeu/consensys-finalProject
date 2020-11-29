@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
+import "./TokenERC20.sol";
+
 // Online MarketPlace running on the blockchain
-contract GMart{
-    address public owner;
+contract GMart is TokenERC20{
+    
+    TokenERC20 tokenInstance;
+    address public owner = 0x5B38Da6a701c568545dCfcB03FcB875f56beddC4;
     uint totalItem = 0;
     uint8 defaultId = 10;
     uint8 defaultId_storeOwner = 0;
@@ -61,8 +65,18 @@ contract GMart{
     event Withdrawal(address indexed _from, address indexed _to, uint _amount);
     event RemovedItem(address indexed _msgsender, bytes _refId);
     event ReceivedEther(address, uint);
+    event FrozenFunds(address target, bool frozen);
+     // This generates a public event on the blockchain that will notify clients
+    event Transfer(address indexed from, address indexed to, uint256 value);
     
-
+    // Public event on the blockchain that will notify clients
+    event Approval(address indexed _owner, address indexed _spender, uint256 _value);
+    // Notifies clients about the amount burnt
+    event Burn(address indexed from, uint256 value);
+    
+    // An array with all balances 
+    // mapping (address => uint256) public balanceOf;
+    // mapping (address => mapping (address => uint256)) public allowance;
     mapping(address => bool) public  isAdmin;
     mapping(address => Admins) adminMap;
     mapping(address => bool) public adminApprovalToAdd;
@@ -79,18 +93,30 @@ contract GMart{
     mapping(address => mapping(bytes => bool)) public ownerShip;
     mapping(address => mapping(bytes => bytes)) itemHashMap;
     mapping(bytes => bool) itemExist;
-    mapping(address => uint256) public balance;
+    mapping(address => uint256) public balanceof;
     mapping(address => uint256) public shoppers;
+    mapping (address => bool) public frozenAccounts;
 
     // EnumerableMap.UintToAddressMap private store_list;
     
     // Initialized at deployment time.
-    constructor () public {
-        // token = IERC777(_token);
-        owner = 0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2;
-        // _erc1820.setInterfaceImplementer(address(this), TOKENS_RECIPIENT_INTERFACE_HASH, address(this));
-        
+    /**
+     * Constrctor function
+     *
+     * Initializes contract with initial supply tokens to the creator of the contract
+     */
+    constructor(
+        uint256 initialSupply,
+        string memory tokenName,
+        string memory tokenSymbol
+    ) TokenERC20(initialSupply, tokenName, tokenSymbol) public {
+        // totalSupply = _initialSupply * 10 ** uint256(decimals);  // Update total supply with the decimal amount
+        // balanceOf[msg.sender] = totalSupply;                // Give the creator all initial tokens
+        // name = _tokenName;                                   // Set the name for display purposes
+        // symbol = _tokenSymbol;                               // Set the symbol for display purposes
     }
+
+    
     //Only sender with owner Authorization is permiitted
     modifier onlyOwner() {
         require(msg.sender == owner, "Request failed; Not an owner");
@@ -112,6 +138,119 @@ contract GMart{
     modifier checkItemExist(bytes memory _itemRef) {
         require(itemExist[_itemRef] == true, "Item does not exist");
         _;
+    }
+    
+    function transferOwnership(address _newOwner) public onlyOwner {
+        owner = _newOwner;
+    }
+    
+    // /* Internal transfer, only can be called by this contract */
+    // function _transfer(address _from, address _to, uint _value) internal override {
+    //     require (_to != address(0));                               // Prevent transfer to 0x0 address. Use burn() instead
+    //     require (balanceOf[_from] >= _value);               // Check if the sender has enough
+    //     require (balanceOf[_to] + _value >= balanceOf[_to]); // Check for overflows
+    //     require(!frozenAccounts[_from]);                     // Check if sender is frozen
+    //     require(!frozenAccounts[_to]);                       // Check if recipient is frozen
+    //     balanceOf[_from] -= _value;                         // Subtract from the sender
+    //     balanceOf[_to] += _value;                           // Add the same to the recipient
+    //     emit Transfer(_from, _to, _value);
+    // }
+    
+    // @notice Create `mintedAmount` tokens and send it to `target`
+    // @param target Address to receive the tokens
+    // @param mintedAmount the amount of tokens it will receive
+    function mintToken(address target, uint256 mintedAmount) onlyOwner public {
+        balanceOf[target] += mintedAmount;
+        totalSupply += mintedAmount;
+        emit Transfer(address(0), address(this), mintedAmount);
+        emit Transfer(address(this), target, mintedAmount);
+    }
+    
+    // @notice `freeze? Prevent | Allow` `target` from sending & receiving tokens
+    // @param target Address to be frozen
+    // @param freeze either to freeze it or not
+    function freezeAccount(address target, bool freeze) onlyOwner public {
+        frozenAccounts[target] = freeze;
+        emit FrozenFunds(target, freeze);
+    }
+
+    /*
+     * Transfer tokens
+     *
+     * Send `_value` tokens to `_to` from your account
+     * @param _from Address of sender
+     * @param _to The address of the recipient
+     * @param _value the amount to send
+     */
+    function transferToken(address _to, uint _value) internal {
+        require(!frozenAccounts[_to]);                       // Check if recipient is frozen
+        _transfer(msg.sender, _to, _value);
+    }
+    
+    /**
+     * Transfer tokens from other address
+     *
+     * Send `_value` tokens to `_to` in behalf of `_from`
+     *
+     * @param _from The address of the sender
+     * @param _to The address of the recipient
+     * @param _value the amount to send
+     */
+    function transferTokenFrom(address _from, address _to, uint256 _value) public returns (bool success) {
+        require(!frozenAccounts[_from]);        // Check if sender is frozen
+        require(!frozenAccounts[_to]);          // Check if recipient is frozen
+        transferFrom(_from, _to, _value);
+        return true;
+    }
+    
+    /**
+     * Set allowance for other address
+     *
+     * Allows `_spender` to spend no more than `_value` tokens in your behalf
+     *
+     * @param _spender The address authorized to spend
+     * @param _value the max amount they can spend
+     */
+    function approveSpender(address _spender, uint256 _value) public {
+        approve(_spender, _value);
+        emit Approval(msg.sender, _spender, _value);
+    }
+    
+    /**
+     * Set allowance for other address and notify
+     *
+     * Allows `_spender` to spend no more than `_value` tokens on your behalf, and then ping the contract about it
+     *
+     * @param _spender The address authorized to spend
+     * @param _value the max amount they can spend
+     * @param _extraData some extra information to send to the approved contract
+     */
+    function approveandCall(address _spender, uint256 _value, bytes memory _extraData) public {
+        approveAndCall(_spender, _value, _extraData);
+    }
+    
+    /**
+     * Destroy tokens
+     *
+     * Remove `_value` tokens from the system irreversibly
+     *
+     * @param _value the amount of money to burn
+     */
+    function burnToken(uint256 _value) public {
+        burn(_value);
+    }
+    
+       /**
+     * Destroy tokens from other account
+     *
+     * Remove `_value` tokens from the system irreversibly on behalf of `_from`.
+     *
+     * @param _from the address of the sender
+     * @param _value the amount of money to burn
+     */
+    function burnTokenFrom(address _from, uint256 _value) public {
+        burnFrom(_from, _value);
+        
     }
     
     /**
@@ -284,16 +423,14 @@ contract GMart{
             uint buyUnitPrice = _itemToBuy.price;
             address _sellerAddress = _itemToBuy.sellerAddress;
             require(_qnty > 0, "Invalid quantity");
-            require(balance[msg.sender] >= buyUnitPrice, "Insufficeient balance");
+            require(balanceOf[msg.sender] >= buyUnitPrice, "Insufficeient balance");
             require(_itemToBuy.status == available, "Item Unavailable");
             require(_qnty <= _itemToBuy.quantity, "Cannot exceed seller's preset amount.");
-            if (_qnty == 0) {
-              revert();
-            }
             uint256 amountToPay = _qnty * buyUnitPrice;
             require(amountToPay / _qnty == buyUnitPrice);
-            balance[msg.sender] -= amountToPay;
-            balance[_sellerAddress] += amountToPay;
+            require(msg.value >= amountToPay, "Amount cannot be less than total price");
+            balanceOf[msg.sender] -= msg.value;
+            balanceOf[_sellerAddress] += msg.value;
             ownerShip[_sellerAddress][_itemRef] = false;
             ownerShip[msg.sender][_itemRef] = true;
             uint prevQuanty = _itemToBuy.quantity;
@@ -309,8 +446,8 @@ contract GMart{
      }
      
     function withdrawBalanceStoreOwner(address payable _addr, uint _amount) external payable approvedStoreOwner returns(bool success) {
-         require(balance[msg.sender] >= _amount, "Insufficeient balance");
-         balance[msg.sender] -= _amount;
+         require(balanceOf[msg.sender] >= _amount, "Insufficeient balance");
+         balanceOf[msg.sender] -= _amount;
          _addr.transfer(_amount);
          emit Withdrawal(msg.sender, _addr, _amount);
          return success;
