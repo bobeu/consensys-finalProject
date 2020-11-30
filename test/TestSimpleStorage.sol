@@ -19,20 +19,20 @@ contract TestGMart {
   }
 
   function testCheckIsAdminFail() public {
-    (bool actual_1, bool actual_2) = gmartInstance.checkIsAdmin(admin);
+    (bool actual_1, bool actual_2) = gmartInstance.checkIsAdmin(admin, 1);
     bool expected = false;
     Assert.equal(actual_2, expected, "Should fail and return false");
     Assert.equal(actual_1, expected, "This test should fail by returning false.");
   }
 
-  function testAddAmdin() public onlyOwner {
-    bool actual = gmartInstance.addAdmin(admin, true);
+  function testAddAdmin() public onlyOwner {
+    bool actual = gmartInstance.addAdmin(admin);
     bool expected = true;
     Assert.equal(actual, expected, "Should return true when an admin is added");
   }
 
   function testCheckIsAdminPass() public {
-    (bool actual_1, bool actual_2) = gmartInstance.checkIsAdmin(admin);
+    (bool actual_1, bool actual_2) = gmartInstance.checkIsAdmin(admin, 0);
     bool expected = true;
     Assert.equal(actual_2, expected, "Should return 'TRUE' if an admin is added.");
     Assert.equal(actual_1, expected, "Should return 'TRUE' if an admin is added.");
