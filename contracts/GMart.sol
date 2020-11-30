@@ -95,10 +95,7 @@ contract GMart is TokenERC20{
     mapping(bytes => bool) itemExist;
     mapping(address => uint256) public balanceof;
     mapping(address => uint256) public shoppers;
-    mapping (address => bool) public frozenAccounts;
-
-    // EnumerableMap.UintToAddressMap private store_list;
-    
+    mapping (address => bool) public frozenAccounts;    
     // Initialized at deployment time.
     /**
      * Constrctor function
@@ -106,17 +103,11 @@ contract GMart is TokenERC20{
      * Initializes contract with initial supply tokens to the creator of the contract
      */
     constructor(
-        uint256 initialSupply,
-        string memory tokenName,
-        string memory tokenSymbol
-    ) TokenERC20(initialSupply, tokenName, tokenSymbol) public {
-        // totalSupply = _initialSupply * 10 ** uint256(decimals);  // Update total supply with the decimal amount
-        // balanceOf[msg.sender] = totalSupply;                // Give the creator all initial tokens
-        // name = _tokenName;                                   // Set the name for display purposes
-        // symbol = _tokenSymbol;                               // Set the symbol for display purposes
-    }
+        // uint256 initialSupply,
+        // string memory tokenName,
+        // string memory tokenSymbol
+    ) TokenERC20(500000, "gmarttoken", "GMT") public {}
 
-    
     //Only sender with owner Authorization is permiitted
     modifier onlyOwner() {
         require(msg.sender == owner, "Request failed; Not an owner");
