@@ -1,35 +1,42 @@
-const GMart = artifacts.require("./GMart.sol");
 
-contract("GMart", accounts => {
-  it("...should change an admin approval to add.", async () => {
-    const ginstance = await GMart.deployed();
-    // var newAddress = "0x5B38Da6a701c568545dCfcB03FcB875f56beddC4";
-    // Set aapproval for an admin to true.
-    await ginstance.addAdmin(accounts[1], {from: accounts[2]});
-    const actual = await ginstance.changeAdminApproval(accounts[1], false, 1, { from: accounts[2]});
-    assert.equal(actual, true, "The approval was not changed. It should return true.");
-  });
+/*
+Testing for GMart contract - "./contract/GMart.sol"
+*/
+let GMart = artifacts.require("GMart");
+let catchRevert = require("./exceptionsHelpers.js").catchRevert;
+
+contract('GMart', accounts => {
+
+    const [firstAccount] = accounts;
+
+    it("...sets an owner", async () => {
+        const instance = await GMart.new();
+        assert.equal(await instance.owner.call(), firstAccount, "Should set an owner.");
+    });
+
+    it("...should add an admin to the admin List.", async () => {
+        const instance = await GMart.new();
+        const _owner = instance.owner;
+        await instance.addAdmin(accounts[1]);
+        const expected = await instance.checkIsAdmin(accounts[1], 1);
+        assert.equal(expected, true, "Should return true when address is added");
+    });
+
+    it("...should return false if admin is added.", async () => {
+        const instance = await GMart.new();
+        await instance.addAdmin(accounts[1]);
+        const expected = await instance.checkIfAdmincanAdd(accounts[1]);
+        assert.equal(expected, false, 'Should return true ');
+    });
+
+    it("...should change an admin approval to add.", async () => {
+        const instance = await GMart.new();
+        await instance.addAdmin(accounts[2]);
+        await instance.changeAdminApproval(accounts[2], true, 1);
+        const expected = await instance.checkIfAdmincanAdd(accounts[2]);
+        assert.equal(expected, true, "The approval should change to true.");
+    });
+
+
 });
 
-
-// const IPFSInbox = artifacts.require("./IPFSInbox.sol");
-// contract("IPFSInbox", accounts => {
-//   it("...should emit an event when you send an IPFS address.", 
-//     async () => {
-//         // Wait for the contract to be deployed
-//         const ipfsInbox = await IPFSInbox.deployed();
-//         // Set a variable to false, and create an event listener
-//         // to set it to true if the event fires.       
-//         eventEmitted = false
-//         var event = ipfsInbox.ipfsSent()
-//         await event.watch((err, res) => {
-//             eventEmitted = true
-//         })
-//         // Call the contract function which sends an IPFS address
-//         await ipfsInbox.sendIPFS(accounts[1], 
-//             "SampleAddress", { from: accounts[0] });
-//         // Check if the variable is set to true by this time
-//         assert.equal(eventEmitted, true, 
-//             "Sending an IPFS request does not emit an event.");
-//     });
-// });

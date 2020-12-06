@@ -207,12 +207,11 @@ contract GMart is TokenERC20{
      * Initializes contract with initial supply tokens to the creator of the contract
      */
     constructor(
-        address _addr
         // uint256 initialSupply,
         // string memory tokenName,
         // string memory tokenSymbol
     ) TokenERC20(500000, "gmarttoken", "GMT") public {
-        owner = _addr;
+        owner = msg.sender;
     }
 
     //Only sender with owner Authorization is permiitted
@@ -352,8 +351,12 @@ contract GMart is TokenERC20{
         return true;
     }
 
-    function checkIsAdmin(address _addr, uint _id) public view returns(bool, bool) {
-        return (isAdmin[_addr][_id], adminApprovalToAdd[_addr]);
+    function checkIsAdmin(address _addr, uint _id) public view returns(bool) {
+        return (isAdmin[_addr][_id]);
+    }
+
+    function checkIfAdmincanAdd(address _addr) public view returns(bool) {
+        return(adminApprovalToAdd[_addr]);
     }
 
     function checkStoreOwnerApproved(address _addr, uint256 _id) public view returns(bool, bool) {
@@ -372,7 +375,7 @@ contract GMart is TokenERC20{
     function changeAdminApproval(address _addr, bool _approval, uint _id) public onlyOwner returns(bool) {
         require(isAdmin[_addr][_id] == true, "Not already added");
         adminApprovalToAdd[_addr] = _approval;
-        return true;
+        return _approval;
     }
     
     function changeStoreOwnerApproval(
@@ -383,18 +386,13 @@ contract GMart is TokenERC20{
         ) public onlyAdmin(_adminId) returns(bool){
         require(isStoreOwnerApproved[_addr][_storeOwnerId] == true, "Not already added");
         storeOwnerApprovalToAddItem[_addr] = _approval;
-        return true;
+        return _approval;
     }
 
     /**
     * StoreOwners Registers a new storefront. 
     * currently a participant self-adding strorefront
     * param: _storeName: Name of the store.
-    * param: _itemName: Name of an item.
-    * param: _description: Detail of an item.
-    * param: _price: unit price of an item.
-    * param: _storeref: A unique reference Id to the store.
-    * param: _quantity: Unit of item to add.
     */
     function addStorefront(
          string memory _storeName,
