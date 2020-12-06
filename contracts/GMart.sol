@@ -168,7 +168,7 @@ contract GMart is TokenERC20{
 
     event ApprovedStoreOwner(address indexed _addr, uint256 _userId);
     event NewAdmin(address indexed _addr);
-    event NewStoreFront(address indexed _msgsender, bytes _storeRef);
+    event NewStoreFront(address indexed _msgsender, string _storeName, uint _storeNum);
     event UnregisteredStore(address indexed _storeOwnerAddress, uint256 _storeNumber);
     event DeletedStore(address indexed _msgsender, uint256 _storeNumber);
     event NewItem(address indexed _addr, string _itemName, bytes _itemRef);
@@ -189,10 +189,10 @@ contract GMart is TokenERC20{
     mapping(address => mapping(uint => bool)) public  isAdmin;
     mapping(address => bool) public adminApprovalToAdd;
     mapping(address => mapping(uint => bool)) public isStoreOwnerApproved;
-    mapping(address => bool) public storeOwnerApprovalToAddItem;//marked
+    // mapping(address => bool) public storeOwnerApprovalToAddItem;//marked
     mapping(address => mapping(uint256 => bytes)) public storefrontRef;
     mapping(bytes => mapping(uint => bytes)) public storefrontRefItemMap;
-    mapping(bytes => bool) public storeExist;
+    mapping(string => mapping(uint => bool)) storeExist;
     mapping(uint => bytes) public itemsList;
     mapping(address => bool) public ownerShip;
     mapping(bytes => bool) public availableItems;
@@ -228,7 +228,7 @@ contract GMart is TokenERC20{
     //Only approved store owner is allowed
     modifier approvedStoreOwner(uint256 _id) {
         require(isStoreOwnerApproved[msg.sender][_id] == true, "Address not authorized");
-        require(storeOwnerApprovalToAddItem[msg.sender] == true, "Unauthorized to add Item to store");
+        // require(storeOwnerApprovalToAddItem[msg.sender] == true, "Unauthorized to add Item to store");
         _;
     }
     //Check if an item exist in a particular storefront
@@ -359,23 +359,28 @@ contract GMart is TokenERC20{
         return(adminApprovalToAdd[_addr]);
     }
 
-    function checkStoreOwnerApproved(address _addr, uint256 _id) public view returns(bool, bool) {
-        return (isStoreOwnerApproved[_addr][_id], storeOwnerApprovalToAddItem[_addr]);
+    function checkStoreOwnerApproved(address _addr, uint256 _id) public view returns(bool) {
+        return isStoreOwnerApproved[_addr][_id];
     }
     
-    function approve_StoreOwner(address _addr, uint _id) public onlyAdmin(_id) returns(bool successful) {
+    function approve_StoreOwner(address _addr, uint _id) public onlyAdmin(_id) returns(bool) {
         require(_addr != address(0), "Invalid address");
         // StoreOwners memory _ownerStruct = storeOwnerMap[_addr];
         uint256 id = storeOwnersCount += 1;
         isStoreOwnerApproved[_addr][_id] = true;
         emit ApprovedStoreOwner(_addr, id);
-        return successful;
+        return true;
     }
     
     function changeAdminApproval(address _addr, bool _approval, uint _id) public onlyOwner returns(bool) {
         require(isAdmin[_addr][_id] == true, "Not already added");
-        adminApprovalToAdd[_addr] = _approval;
-        return _approval;
+        if(_approval == true){
+            adminApprovalToAdd[_addr] = true;
+            return true;
+        } else if(_approval == false){
+            adminApprovalToAdd[_addr] = false;
+            return false;
+        }
     }
     
     function changeStoreOwnerApproval(
@@ -385,8 +390,13 @@ contract GMart is TokenERC20{
         uint256 _storeOwnerId
         ) public onlyAdmin(_adminId) returns(bool){
         require(isStoreOwnerApproved[_addr][_storeOwnerId] == true, "Not already added");
-        storeOwnerApprovalToAddItem[_addr] = _approval;
-        return _approval;
+        if(_approval == true && isStoreOwnerApproved[_addr][_storeOwnerId] == true){
+            return false;
+        }else if(isStoreOwnerApproved[_addr][_storeOwnerId] == true && _approval == false){
+            isStoreOwnerApproved[_addr][_storeOwnerId] = false;
+            return true;
+        }
+        
     }
 
     /**
@@ -397,31 +407,41 @@ contract GMart is TokenERC20{
     function addStorefront(
          string memory _storeName,
          uint256 _userId
-         ) public approvedStoreOwner(_userId) returns(bool) {
+         ) public approvedStoreOwner(_userId) returns(string memory, uint) {
          uint256 _storeNumber = storeCount += 1;
          uint256 dateCreated = now;
          bool _active = true;
          bytes memory _storefrontRef = abi.encode(msg.sender, _storeName, _storeNumber, dateCreated, _active);
-         require(storeExist[_storefrontRef] == false, "Store already exist" );
+         require(storeExist[_storeName][_storeNumber] == false, "Store already exist" );
          storefrontRef[msg.sender][_storeNumber] = _storefrontRef;
-         storeExist[_storefrontRef] == true;
-         emit NewStoreFront(msg.sender, _storefrontRef);
-         return true;
+         storeExist[_storeName][_storeNumber] = true;
+         emit NewStoreFront(msg.sender, _storeName, _storeNumber);
+         return (_storeName, _storeNumber);
         
      }
+
+    function ifStoreExist(string memory _name, uint _storeNumber) public view returns(bool) {
+        if(storeExist[_name][_storeNumber]){
+            return true;
+        }else{
+            return false;
+        }
+     }
      
-     function getStoreDetail(
-         bytes calldata _storeRef,
-         uint256 _userId
-         ) external view approvedStoreOwner(_userId) returns(
-             address,
-             string memory,
-             uint,
-             uint,
-             bool
-             ) {
-                 require(storeExist[_storeRef] == true, "Store does not exist" );
-                 return(abi.decode(_storeRef, (address, string, uint, uint, bool)));
+    function getStoreDetail(
+        string calldata _name,
+        uint _number,
+        bytes calldata _storeRef,
+        uint256 _userId
+        ) external view approvedStoreOwner(_userId) returns(
+            address,
+            string memory,
+            uint,
+            uint,
+            bool
+            ) {
+                require(storeExist[_name][_number] == true, "Store does not exist" );
+                return(abi.decode(_storeRef, (address, string, uint, uint, bool)));
      }
      
           /**
@@ -535,7 +555,7 @@ contract GMart is TokenERC20{
     function unregisterStore(address _addr, uint _id, uint256 _userId, uint256 _storeNumber) public onlyAdmin(_id) returns(bool) {
         require(isStoreOwnerApproved[_addr][_userId] == true, "Address not authorized");
         storefrontRef[_addr][_storeNumber] = abi.encode(0, 0, 0, 0, 0);
-        storeOwnerApprovalToAddItem[_addr] == false;
+        // storeOwnerApprovalToAddItem[_addr] == false;
         emit UnregisteredStore(_addr, _storeNumber);
         return true;
     }
