@@ -174,7 +174,7 @@ contract GMart is TokenERC20{
     event NewItem(address indexed _addr, string _itemName, bytes _itemRef);
     event PriceChange(bytes _referenceId, uint256 _newSetPrice);
     event Withdrawal(address indexed _from, address indexed _to, uint _amount);
-    event RemovedItem(address indexed _msgsender, bytes _refId);
+    event RemovedItem(address indexed _msgsender, string _itemName, uint _id);
     event ReceivedEther(address, uint);
     event FrozenFunds(address target, bool frozen);
      // This generates a public event on the blockchain that will notify clients
@@ -191,11 +191,12 @@ contract GMart is TokenERC20{
     mapping(address => mapping(uint => bool)) public isStoreOwnerApproved;
     // mapping(address => bool) public storeOwnerApprovalToAddItem;//marked
     mapping(address => mapping(uint256 => bytes)) public storefrontRef;
-    mapping(bytes => mapping(uint => bytes)) public storefrontRefItemMap;
+    mapping(address => mapping(string => mapping(string => mapping(uint => bytes)))) public storefrontRefItemMap;
     mapping(string => mapping(uint => bool)) storeExist;
     mapping(uint => bytes) public itemsList;
     mapping(address => bool) public ownerShip;
-    mapping(bytes => bool) public availableItems;
+    mapping(string => mapping(uint => address)) public storeOwners;
+    mapping(string => mapping(uint => bool)) public availableItems;
     mapping(address => uint256) public balanceof;
     mapping(address => uint256) public shoppers;
     mapping (address => bool) public frozenAccounts;
@@ -232,8 +233,8 @@ contract GMart is TokenERC20{
         _;
     }
     //Check if an item exist in a particular storefront
-    modifier checkItemExist(bytes memory _itemRef) {
-        require(availableItems[_itemRef] == true, "Item does not exist");
+    modifier checkItemExist(string memory _item, uint _itemNumber) {
+        require(availableItems[_item][_itemNumber] == true, "Item does not exist");
         _;
     }
     
@@ -367,7 +368,7 @@ contract GMart is TokenERC20{
         require(_addr != address(0), "Invalid address");
         // StoreOwners memory _ownerStruct = storeOwnerMap[_addr];
         uint256 id = storeOwnersCount += 1;
-        isStoreOwnerApproved[_addr][_id] = true;
+        isStoreOwnerApproved[_addr][id] = true;
         emit ApprovedStoreOwner(_addr, id);
         return true;
     }
@@ -415,6 +416,7 @@ contract GMart is TokenERC20{
          require(storeExist[_storeName][_storeNumber] == false, "Store already exist" );
          storefrontRef[msg.sender][_storeNumber] = _storefrontRef;
          storeExist[_storeName][_storeNumber] = true;
+         storeOwners[_storeName][_storeNumber] = msg.sender;
          emit NewStoreFront(msg.sender, _storeName, _storeNumber);
          return (_storeName, _storeNumber);
         
@@ -428,20 +430,9 @@ contract GMart is TokenERC20{
         }
      }
      
-    function getStoreDetail(
-        string calldata _name,
-        uint _number,
-        bytes calldata _storeRef,
-        uint256 _userId
-        ) external view approvedStoreOwner(_userId) returns(
-            address,
-            string memory,
-            uint,
-            uint,
-            bool
-            ) {
-                require(storeExist[_name][_number] == true, "Store does not exist" );
-                return(abi.decode(_storeRef, (address, string, uint, uint, bool)));
+    function getStoreOwner(string memory _name, uint _id) public view returns(address) {
+        require(storeExist[_name][_id] == true, "Store does not exist" );
+        return(storeOwners[_name][_id]);
      }
      
           /**
@@ -457,7 +448,7 @@ contract GMart is TokenERC20{
         string memory _itemName,
         string memory _description,
         uint _price,
-        bytes memory _storeRef,
+        string memory _storeName,
         uint _qnty,
         uint256 _userId
         )public 
@@ -465,45 +456,41 @@ contract GMart is TokenERC20{
         returns(bool)
         {
             require(_price > 0, "Price cannot be zero");
-            // Item memory _newItem;
-            string memory name = _itemName;
-            uint256 price = _price;
-            uint256 quantity = _qnty;
             uint256 itemNumber = itemcount += 1;
-            string memory description = _description;
+            address _seller = msg.sender;
             bytes memory _itemref = abi.encode(
-                msg.sender,
-                name,
-                price,
-                quantity,
+                _itemName,
+                _price,
+                _qnty,
                 itemNumber,
-                description
+                _description,
+                _seller
                 );
-                storefrontRefItemMap[_storeRef][itemNumber] = _itemref;
+                storefrontRefItemMap[msg.sender][_storeName][_itemName][itemNumber] = _itemref;
                 ownerShip[msg.sender] = true;
-                availableItems[_itemref] = true;
+                availableItems[_itemName][itemNumber] = true;
                 itemsList[itemNumber] = _itemref;
                 emit NewItem(msg.sender, _itemName, _itemref);
                 return true;
             
         }
      
-     function removeAnItem(bytes memory _itemRef, uint256 _userId, bytes memory _storeRef, uint _itemNumber) public approvedStoreOwner(_userId) checkItemExist(_itemRef) {
-        //  require(availableItems[_itemRef] == true, "Item does not exist");
-         delete storefrontRefItemMap[_storeRef][_itemNumber];
-         emit RemovedItem(msg.sender, _itemRef);
+    function removeAnItem(string memory _storeName, uint256 _userId, string memory _itemName, uint _itemNumber) public approvedStoreOwner(_userId) checkItemExist(_itemName, _itemNumber) {
+        delete storefrontRefItemMap[msg.sender][_storeName][_itemName][_itemNumber];
+        emit RemovedItem(msg.sender, _itemName, _itemNumber);
      }
-      function removeAStore(uint256 _userId, uint256 _storeNumber) public approvedStoreOwner(_userId) {
-          delete storefrontRef[msg.sender][_storeNumber];
-          emit DeletedStore(msg.sender, _storeNumber);
+
+    function removeAStore(uint256 _userId, uint256 _storeNumber) public approvedStoreOwner(_userId) {
+        delete storefrontRef[msg.sender][_storeNumber];
+        emit DeletedStore(msg.sender, _storeNumber);
       }
 
     function buyItem(
-        bytes calldata ref,
+        string calldata _name,
         uint _qnty,
         uint _itemNumber,
         uint _offer
-        )external payable checkItemExist(ref) returns(bool) 
+        )external payable checkItemExist(_name, _itemNumber) returns(bool) 
         {
             bytes memory _itemToBuy = itemsList[_itemNumber];
             (
