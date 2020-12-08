@@ -14,7 +14,6 @@ contract TokenERC20 {
     string public symbol;
     uint8 public decimals = 18;
     uint256 public totalSupply;
-    uint256 public itemcount = 0;
     
     // An array with all balances 
     mapping (address => uint256) public balanceOf;
@@ -159,12 +158,12 @@ contract GMart is TokenERC20{
     
     address public owner;
     uint totalItem = 0;
-    // uint8 defaultId = 10;
     uint8 defaultId_storeOwner = 0;
     uint shoppers_count = 0;
     uint public adminCount = 0;
     uint256 public storeOwnersCount = 0;
     uint256 public storeCount = 0;
+    uint256 public itemcount = 0;
 
     event ApprovedStoreOwner(address indexed _addr, uint256 _userId);
     event NewAdmin(address indexed _addr);
@@ -192,7 +191,7 @@ contract GMart is TokenERC20{
     // mapping(address => bool) public storeOwnerApprovalToAddItem;//marked
     mapping(address => mapping(uint256 => bytes)) public storefrontRef;
     mapping(address => mapping(string => mapping(string => mapping(uint => bytes)))) public storefrontRefItemMap;
-    mapping(string => mapping(uint => bool)) storeExist;
+    mapping(string => mapping(uint => bool)) public storeExist;
     mapping(uint => bytes) public itemsList;
     mapping(address => bool) public ownerShip;
     mapping(string => mapping(uint => address)) public storeOwners;
@@ -346,10 +345,11 @@ contract GMart is TokenERC20{
     function addAdmin(address _addr) public onlyOwner returns(bool){
         require(adminCount <= 3, "Max admin reached --> [3]");
         require(_addr != address(0), "Invalid address");
-        uint id = adminCount += 1;
+        uint id = adminCount + 1;
         isAdmin[_addr][id] = true;
+        adminCount += 1;
         emit NewAdmin(_addr);
-        return true;
+        return isAdmin[_addr][id];
     }
 
     function checkIsAdmin(address _addr, uint _id) public view returns(bool) {
@@ -367,8 +367,9 @@ contract GMart is TokenERC20{
     function approve_StoreOwner(address _addr, uint _id) public onlyAdmin(_id) returns(bool) {
         require(_addr != address(0), "Invalid address");
         // StoreOwners memory _ownerStruct = storeOwnerMap[_addr];
-        uint256 id = storeOwnersCount += 1;
+        uint256 id = storeOwnersCount + 1;
         isStoreOwnerApproved[_addr][id] = true;
+        storeOwnersCount += 1;
         emit ApprovedStoreOwner(_addr, id);
         return true;
     }
@@ -456,7 +457,7 @@ contract GMart is TokenERC20{
         returns(bool)
         {
             require(_price > 0, "Price cannot be zero");
-            uint256 itemNumber = itemcount += 1;
+            uint256 itemNumber = itemcount + 1;
             address _seller = msg.sender;
             bytes memory _itemref = abi.encode(
                 _itemName,
@@ -470,19 +471,40 @@ contract GMart is TokenERC20{
                 ownerShip[msg.sender] = true;
                 availableItems[_itemName][itemNumber] = true;
                 itemsList[itemNumber] = _itemref;
+                itemcount += 1;
                 emit NewItem(msg.sender, _itemName, _itemref);
                 return true;
             
         }
      
-    function removeAnItem(string memory _storeName, uint256 _userId, string memory _itemName, uint _itemNumber) public approvedStoreOwner(_userId) checkItemExist(_itemName, _itemNumber) {
+    function removeAnItem(
+        string memory _storeName,
+        uint256 _userId,
+        string memory _itemName,
+        uint _itemNumber
+        )
+        public
+        approvedStoreOwner(_userId)
+        checkItemExist(_itemName, _itemNumber)
+        returns(bool){
         delete storefrontRefItemMap[msg.sender][_storeName][_itemName][_itemNumber];
+        availableItems[_itemName][_itemNumber] = false;
+        itemcount -= 1;
         emit RemovedItem(msg.sender, _itemName, _itemNumber);
+        return true;
      }
 
-    function removeAStore(uint256 _userId, uint256 _storeNumber) public approvedStoreOwner(_userId) {
+    function removeAStore(
+        string memory _storeName,
+        uint256 _userId,
+        uint256 _storeNumber
+        ) public approvedStoreOwner(_userId) returns(bool) {
         delete storefrontRef[msg.sender][_storeNumber];
+        delete storeOwners[_storeName][_storeNumber];
+        storeExist[_storeName][_storeNumber] = false;
+        storeCount -= 1;
         emit DeletedStore(msg.sender, _storeNumber);
+        return true;
       }
 
     function buyItem(
@@ -513,6 +535,7 @@ contract GMart is TokenERC20{
                 quantity -= _qnty;
                 if(quantity == 0){
                     delete itemsList[_itemNumber];
+                    itemcount -= 1;
                     return true;
                 }else if(quantity > 0){
                     itemsList[_itemNumber] = abi.encode(sellerAddress, name, price, quantity, itemNumber, description);
@@ -529,10 +552,11 @@ contract GMart is TokenERC20{
          return success;
      }
     
-    function disableAdmin(address _addr, uint8 _id) public onlyOwner returns(bool success) {
+    function disableAdmin(address _addr, uint8 _id) public onlyOwner returns(bool) {
         require(isAdmin[_addr][_id] == true, "Not an admin already");
         isAdmin[_addr][_id] = false;
-        if(isAdmin[_addr][_id] == false) return true;
+        adminCount -= 1;
+        return isAdmin[_addr][_id];
     }
     
     /**

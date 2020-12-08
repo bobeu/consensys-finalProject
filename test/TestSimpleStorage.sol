@@ -20,12 +20,12 @@ contract TestGMart {
     Assert.equal(result, false, "Should fail and return false");
   }
 
-  function testAddAdmin() public {
-    // GMart gmartInstance = GMart(DeployedAddresses.GMart());
-    owner = gmartInstance.owner();
-    bool result = gmartInstance.addAdmin(admin);
-    Assert.equal(result, true, "Should return true when an admin is added");
-  }
+  // function testAddAdmin() public {
+  //   // GMart gmartInstance = GMart(DeployedAddresses.GMart());
+  //   owner = gmartInstance.owner();
+  //   bool result = gmartInstance.addAdmin(admin);
+  //   Assert.equal(result, true, "Should return true when an admin is added");
+  // }
 
   // function testCheckIsAdminPass() public {
   //   GMart gmartInstance = new GMart();
