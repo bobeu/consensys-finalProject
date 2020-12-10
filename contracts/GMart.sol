@@ -196,7 +196,7 @@ contract GMart is TokenERC20{
     uint256 public itemcount = 0; //Total number of items
     uint256 public shoppersCount; //All users
     uint public etherBalance; //Balances other than custom token
-    uint minimumDonation = 0.1 ether;
+    uint public minimumDonation = 0.1 ether;
 
     // Emits event when a storeOwner is approved
     event ApprovedStoreOwner(address indexed _addr, uint256 _userId);
