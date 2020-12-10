@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.6.0;
-pragma experimental ABIEncoderV2;
-
+// pragma experimental ABIEncoderV2;
 
 interface tokenRecipient { 
     function receiveApproval(address _from, uint256 _value, address _token, bytes calldata _extraData) external;
-    
 }
 
 contract TokenERC20 {
     // Public variables of the token
+    address public owner;
     string public name;
     string public symbol;
     uint8 public decimals = 18;
@@ -18,14 +17,24 @@ contract TokenERC20 {
     // An array with all balances 
     mapping (address => uint256) public balanceOf;
     mapping (address => mapping (address => uint256)) public allowance;
+    mapping (address => bool) public frozenAccounts;
+    
     
     // This generates a public event on the blockchain that will notify clients
     event Transfer(address indexed from, address indexed to, uint256 value);
-    
-    // Public event on the blockchain that will notify clients
+    // Alerts client when an account is frozen
+    event FrozenFunds(address target, bool frozen);
+    // Publishes event on the blockchain that will notify clients
     event Approval(address indexed _owner, address indexed _spender, uint256 _value);
     // Notifies clients about the amount burnt
     event Burn(address indexed from, uint256 value);
+
+    //Only sender with owner Authorization is permiitted
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Request failed; Not an owner");
+        _;
+    }
+
     /**
      * Constrctor function
      *
@@ -61,6 +70,25 @@ contract TokenERC20 {
         // Asserts are used to use static analysis to find bugs in your code. They should never fail
         assert(balanceOf[_from] + balanceOf[_to] == previousBalances);
     }
+
+    // @notice Create `mintedAmount` tokens and send it to `target`
+    // @param target Address to receive the tokens
+    // @param mintedAmount the amount of tokens it will receive
+    function mintToken(address target, uint256 mintedAmount) onlyOwner public {
+        balanceOf[target] += mintedAmount;
+        totalSupply += mintedAmount;
+        emit Transfer(address(0), address(this), mintedAmount);
+        emit Transfer(address(this), target, mintedAmount);
+    }
+    
+    // @notice `freeze? Prevent | Allow` `target` from sending & receiving tokens
+    // @param target Address to be frozen
+    // @param freeze either to freeze it or not
+    function freezeAccount(address target, bool freeze) onlyOwner public {
+        frozenAccounts[target] = freeze;
+        emit FrozenFunds(target, freeze);
+    }
+
     /**
      * Transfer tokens
      *
@@ -70,6 +98,7 @@ contract TokenERC20 {
      * @param _value the amount to send
      */
     function transfer(address _to, uint256 _value) public returns (bool success) {
+        require(!frozenAccounts[_to]);
         _transfer(msg.sender, _to, _value);
         return true;
     }
@@ -84,17 +113,20 @@ contract TokenERC20 {
      */
     function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
         require(_value <= allowance[_from][msg.sender]); // Check allowance amount
+        require(!frozenAccounts[_from]);        // Check if sender is frozen
+        require(!frozenAccounts[_to]);          // Check if recipient is frozen
         allowance[_from][msg.sender] -= _value;
         _transfer(_from, _to, _value);
         return true;
     }
+
     /**
      * Set allowance for other address
      *
-     * Allows `_spender` to spend no more than `_value` tokens in your behalf
+     * Allows `_spender`: to spend no more than `_value` tokens in your behalf
      *
-     * @param _spender The address authorized to spend
-     * @param _value the max amount they can spend
+     * @param _spender: The address authorized to spend
+     * @param _value: the max amount they can spend
      */
     function approve(address _spender, uint256 _value) public returns (bool success) {
         allowance[msg.sender][_spender] = _value;
@@ -106,9 +138,9 @@ contract TokenERC20 {
      *
      * Allows `_spender` to spend no more than `_value` tokens on your behalf, and then ping the contract about it
      *
-     * @param _spender The address authorized to spend
-     * @param _value the max amount they can spend
-     * @param _extraData some extra information to send to the approved contract
+     * @param _spender: The address authorized to spend
+     * @param _value: the max amount they can spend
+     * @param _extraData :some extra information to send to the approved contract
      */
     function approveAndCall(address _spender, uint256 _value, bytes memory _extraData)
         public
@@ -150,24 +182,29 @@ contract TokenERC20 {
         emit Burn(_from, _value);
         return true;
     }
+    
 }
-
 
 // Online MarketPlace running on the blockchain
 contract GMart is TokenERC20{
     
-    address public owner;
-    uint totalItem = 0;
-    uint8 defaultId_storeOwner = 0;
-    uint shoppers_count = 0;
-    uint public adminCount = 0;
-    uint256 public storeOwnersCount = 0;
-    uint256 public storeCount = 0;
-    uint256 public itemcount = 0;
+    uint totalItem = 0; //Total items added in contract lifetime
+    uint8 defaultId_storeOwner = 0; //preset id storeOwners
+    uint public adminCount = 0; //Numbers of Admins
+    uint256 public storeOwnersCount = 0; //All StoreOwners
+    uint256 public storeCount = 0; //Total number of stores
+    uint256 public itemcount = 0; //Total number of items
+    uint256 public shoppersCount; //All users
+    uint public etherBalance; //Balances other than custom token
+    uint minimumDonation = 0.1 ether;
 
+    // Emits event when a storeOwner is approved
     event ApprovedStoreOwner(address indexed _addr, uint256 _userId);
+    // Notifies the client when a new admin is added
     event NewAdmin(address indexed _addr);
+    // Emits notification when a new store is added
     event NewStoreFront(address indexed _msgsender, string _storeName, uint _storeNum);
+    // Emits event when a st
     event UnregisteredStore(address indexed _storeOwnerAddress, uint256 _storeNumber);
     event DeletedStore(address indexed _msgsender, uint256 _storeNumber);
     event NewItem(address indexed _addr, string _itemName, bytes _itemRef);
@@ -175,7 +212,7 @@ contract GMart is TokenERC20{
     event Withdrawal(address indexed _from, address indexed _to, uint _amount);
     event RemovedItem(address indexed _msgsender, string _itemName, uint _id);
     event ReceivedEther(address, uint);
-    event FrozenFunds(address target, bool frozen);
+    
      // This generates a public event on the blockchain that will notify clients
     event Transfer(address indexed from, address indexed to, uint256 value);
     
@@ -184,21 +221,19 @@ contract GMart is TokenERC20{
     // Notifies clients about the amount burnt
     event Burn(address indexed from, uint256 value);
     
-    // An array with all balances 
-    mapping(address => mapping(uint => bool)) public  isAdmin;
-    mapping(address => bool) public adminApprovalToAdd;
-    mapping(address => mapping(uint => bool)) public isStoreOwnerApproved;
-    // mapping(address => bool) public storeOwnerApprovalToAddItem;//marked
-    mapping(address => mapping(uint256 => bytes)) public storefrontRef;
+    mapping(address => mapping(uint => bool)) public  isAdmin; //Admins approval
+    mapping(address => bool) public adminApprovalToAdd; //Admin approval to add storeOwner
+    mapping(address => mapping(uint => bool)) public isStoreOwnerApproved; // Approvals for storeOwner
+    mapping(address => mapping(uint256 => bytes)) public storefrontRef; //List of storefront refrences/IDs
+    // References to store with Items
     mapping(address => mapping(string => mapping(string => mapping(uint => bytes)))) public storefrontRefItemMap;
-    mapping(string => mapping(uint => bool)) public storeExist;
-    mapping(uint => bytes) public itemsList;
-    mapping(address => bool) public ownerShip;
-    mapping(string => mapping(uint => address)) public storeOwners;
-    mapping(string => mapping(uint => bool)) public availableItems;
-    mapping(address => uint256) public balanceof;
-    mapping(address => uint256) public shoppers;
-    mapping (address => bool) public frozenAccounts;
+    mapping(string => mapping(uint => bool)) public storeExist; //Check for storefront existence
+    mapping(uint => bytes) public itemsList; //List of items
+    mapping(address => bool) public ownerShip; //Ownership of items
+    mapping(string => mapping(uint => address)) public storeOwners;//List of stores with owners
+    mapping(uint => bool) public availableItems; //List of items available for sale
+    mapping(uint => uint) public itemBalance; //Item balance count
+    mapping(address => uint256) public shoppers; //All recognised Users for bounty purpose
     
     // Initialized at deployment time.
     /**
@@ -206,19 +241,10 @@ contract GMart is TokenERC20{
      *
      * Initializes contract with initial supply tokens to the creator of the contract
      */
-    constructor(
-        // uint256 initialSupply,
-        // string memory tokenName,
-        // string memory tokenSymbol
-    ) TokenERC20(500000, "gmarttoken", "GMT") public {
+    constructor() TokenERC20(500000, "gmarttoken", "GMT") public {
         owner = msg.sender;
     }
 
-    //Only sender with owner Authorization is permiitted
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Request failed; Not an owner");
-        _;
-    }
     //Only sender with admin role is permiitted
     modifier onlyAdmin(uint _id) {
         require(isAdmin[msg.sender][_id] == true, "Not Authorized address");
@@ -228,114 +254,25 @@ contract GMart is TokenERC20{
     //Only approved store owner is allowed
     modifier approvedStoreOwner(uint256 _id) {
         require(isStoreOwnerApproved[msg.sender][_id] == true, "Address not authorized");
-        // require(storeOwnerApprovalToAddItem[msg.sender] == true, "Unauthorized to add Item to store");
         _;
     }
-    //Check if an item exist in a particular storefront
-    modifier checkItemExist(string memory _item, uint _itemNumber) {
-        require(availableItems[_item][_itemNumber] == true, "Item does not exist");
-        _;
-    }
-    
-    function transferOwnership(address _newOwner) public onlyOwner {
-        owner = _newOwner;
-    }
-    
-    // @notice Create `mintedAmount` tokens and send it to `target`
-    // @param target Address to receive the tokens
-    // @param mintedAmount the amount of tokens it will receive
-    function mintToken(address target, uint256 mintedAmount) onlyOwner public {
-        balanceOf[target] += mintedAmount;
-        totalSupply += mintedAmount;
-        emit Transfer(address(0), address(this), mintedAmount);
-        emit Transfer(address(this), target, mintedAmount);
-    }
-    
-    // @notice `freeze? Prevent | Allow` `target` from sending & receiving tokens
-    // @param target Address to be frozen
-    // @param freeze either to freeze it or not
-    function freezeAccount(address target, bool freeze) onlyOwner public {
-        frozenAccounts[target] = freeze;
-        emit FrozenFunds(target, freeze);
+    modifier onlyAdminOrStoreOwner(uint _id) {
+        require(
+            (
+                adminApprovalToAdd[msg.sender] == true && isAdmin[msg.sender][_id] == true) || isStoreOwnerApproved[msg.sender][_id] == true,
+            "Not Authorized address"
+            ); _;
     }
 
-    /*
-     * Transfer tokens
-     *
-     * Send `_value` tokens to `_to` from your account
-     * @param _from Address of sender
-     * @param _to The address of the recipient
-     * @param _value the amount to send
-     */
-    function transferToken(address _to, uint _value) internal {
-        require(!frozenAccounts[_to]);                       // Check if recipient is frozen
-        _transfer(msg.sender, _to, _value);
+    //Check if an item exist in a particular storefront
+    modifier checkItemExist(string memory _item, uint _itemNumber) {
+        require(availableItems[_itemNumber] == true, "Item does not exist");
+        _;
     }
     
-    /**
-     * Transfer tokens from other address
-     *
-     * Send `_value` tokens to `_to` in behalf of `_from`
-     *
-     * @param _from The address of the sender
-     * @param _to The address of the recipient
-     * @param _value the amount to send
-     */
-    function transferTokenFrom(address _from, address _to, uint256 _value) public returns (bool success) {
-        require(!frozenAccounts[_from]);        // Check if sender is frozen
-        require(!frozenAccounts[_to]);          // Check if recipient is frozen
-        transferFrom(_from, _to, _value);
-        return true;
-    }
-    
-    /**
-     * Set allowance for other address
-     *
-     * Allows `_spender` to spend no more than `_value` tokens in your behalf
-     *
-     * @param _spender The address authorized to spend
-     * @param _value the max amount they can spend
-     */
-    function approveSpender(address _spender, uint256 _value) public {
-        approve(_spender, _value);
-        emit Approval(msg.sender, _spender, _value);
-    }
-    
-    /**
-     * Set allowance for other address and notify
-     *
-     * Allows `_spender` to spend no more than `_value` tokens on your behalf, and then ping the contract about it
-     *
-     * @param _spender The address authorized to spend
-     * @param _value the max amount they can spend
-     * @param _extraData some extra information to send to the approved contract
-     */
-    function approveandCall(address _spender, uint256 _value, bytes memory _extraData) public {
-        approveAndCall(_spender, _value, _extraData);
-    }
-    
-    /**
-     * Destroy tokens
-     *
-     * Remove `_value` tokens from the system irreversibly
-     *
-     * @param _value the amount of money to burn
-     */
-    function burnToken(uint256 _value) public {
-        burn(_value);
-    }
-    
-       /**
-     * Destroy tokens from other account
-     *
-     * Remove `_value` tokens from the system irreversibly on behalf of `_from`.
-     *
-     * @param _from the address of the sender
-     * @param _value the amount of money to burn
-     */
-    function burnTokenFrom(address _from, uint256 _value) public {
-        burnFrom(_from, _value);
-        
+    // Changes ownership of this contract
+    function transferOwnership(address _newOwner) public onlyOwner {
+        owner = _newOwner;
     }
     
     /**
@@ -352,6 +289,7 @@ contract GMart is TokenERC20{
         return isAdmin[_addr][id];
     }
 
+    // 
     function checkIsAdmin(address _addr, uint _id) public view returns(bool) {
         return (isAdmin[_addr][_id]);
     }
@@ -469,8 +407,9 @@ contract GMart is TokenERC20{
                 );
                 storefrontRefItemMap[msg.sender][_storeName][_itemName][itemNumber] = _itemref;
                 ownerShip[msg.sender] = true;
-                availableItems[_itemName][itemNumber] = true;
+                availableItems[itemNumber] = true;
                 itemsList[itemNumber] = _itemref;
+                itemBalance[itemNumber] = _qnty;
                 itemcount += 1;
                 emit NewItem(msg.sender, _itemName, _itemref);
                 return true;
@@ -488,17 +427,22 @@ contract GMart is TokenERC20{
         checkItemExist(_itemName, _itemNumber)
         returns(bool){
         delete storefrontRefItemMap[msg.sender][_storeName][_itemName][_itemNumber];
-        availableItems[_itemName][_itemNumber] = false;
+        delete itemBalance[_itemNumber];
+        availableItems[_itemNumber] = false;
         itemcount -= 1;
         emit RemovedItem(msg.sender, _itemName, _itemNumber);
         return true;
      }
 
+    /**
+     * @dev UnRegisters a store from the Storefront 
+     * currently only an admin is able to remove store
+     */
     function removeAStore(
         string memory _storeName,
         uint256 _userId,
         uint256 _storeNumber
-        ) public approvedStoreOwner(_userId) returns(bool) {
+        ) public onlyAdminOrStoreOwner(_userId) returns(bool) {
         delete storefrontRef[msg.sender][_storeNumber];
         delete storeOwners[_storeName][_storeNumber];
         storeExist[_storeName][_storeNumber] = false;
@@ -507,21 +451,22 @@ contract GMart is TokenERC20{
         return true;
       }
 
+    // Shopper buys an item
     function buyItem(
         string calldata _name,
         uint _qnty,
-        uint _itemNumber,
-        uint _offer
+        uint _itemNumber
         )external payable checkItemExist(_name, _itemNumber) returns(bool) 
         {
             bytes memory _itemToBuy = itemsList[_itemNumber];
+            uint256 _offer = msg.value;
             (
-                address sellerAddress,
                 string memory name,
                 uint price,
                 uint quantity,
                 uint itemNumber,
-                bytes32 description) = abi.decode(_itemToBuy, (address, string, uint, uint, uint, bytes32));
+                bytes32 description,
+                address sellerAddress) = abi.decode(_itemToBuy, (string, uint, uint, uint, bytes32, address));
                 require(_qnty > 0, "Invalid quantity");
                 uint amountToPay = _qnty * _offer;
                 require(amountToPay / _qnty == _offer, "Overflow spotted");
@@ -534,16 +479,20 @@ contract GMart is TokenERC20{
                 ownerShip[msg.sender] = true;
                 quantity -= _qnty;
                 if(quantity == 0){
+                    availableItems[_itemNumber] = false;
                     delete itemsList[_itemNumber];
+                    delete itemBalance[_itemNumber];
                     itemcount -= 1;
                     return true;
                 }else if(quantity > 0){
                     itemsList[_itemNumber] = abi.encode(sellerAddress, name, price, quantity, itemNumber, description);
+                    itemBalance[itemNumber] = quantity;
                 }
-                shoppers[msg.sender] = shoppers_count += 1;
+                shoppers[msg.sender] = shoppersCount += 1;
                 return true;
      }
      
+    // Approved storeOwners with balances can withdraw from the individual account
     function withdrawBalanceStoreOwner(address payable _addr, uint _amount, uint256 _userId) external payable approvedStoreOwner(_userId) returns(bool success) {
          require(balanceOf[msg.sender] >= _amount, "Insufficeient balance");
          balanceOf[msg.sender] -= _amount;
@@ -551,7 +500,8 @@ contract GMart is TokenERC20{
          emit Withdrawal(msg.sender, _addr, _amount);
          return success;
      }
-    
+
+    // Owner can disable an admin 
     function disableAdmin(address _addr, uint8 _id) public onlyOwner returns(bool) {
         require(isAdmin[_addr][_id] == true, "Not an admin already");
         isAdmin[_addr][_id] = false;
@@ -559,25 +509,26 @@ contract GMart is TokenERC20{
         return isAdmin[_addr][_id];
     }
     
-    /**
-     * @dev UnRegisters a store from the Storefront 
-     * currently only an admin is able to remove store
-     */
-    function unregisterStore(address _addr, uint _id, uint256 _userId, uint256 _storeNumber) public onlyAdmin(_id) returns(bool) {
-        require(isStoreOwnerApproved[_addr][_userId] == true, "Address not authorized");
-        storefrontRef[_addr][_storeNumber] = abi.encode(0, 0, 0, 0, 0);
-        // storeOwnerApprovalToAddItem[_addr] == false;
-        emit UnregisteredStore(_addr, _storeNumber);
-        return true;
-    }
-    
-    //@dev Withdraw funds
-    function withdraw(uint _amount) onlyOwner public payable{
+    //@dev Withdraws ether balance.
+    function withdraw(uint _amount) public onlyOwner payable{
+        require(_amount <= address(this).balance);
         msg.sender.transfer(_amount);
     }
-    
+    // Executes a fallback i.e when a non-existent function is called.
     receive() external payable {
         emit ReceivedEther(msg.sender, msg.value);
+    }
+
+    // Donate ether
+    function sendEther() public payable returns(bool) {
+        require(msg.value >= minimumDonation, "Thanks for donating but 0.1 ether is the minimum");
+        balanceOf[msg.sender] -= msg.value;
+        balanceOf[address(this)] += msg.value;
+        return true;
+    }
+
+    function getBalance() external view returns(uint){
+        return address(this).balance;
     }
     
 }    
