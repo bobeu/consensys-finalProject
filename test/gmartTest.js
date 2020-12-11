@@ -1,18 +1,18 @@
 
 /*
-Testing for GMart contract - "./contract/GMart.sol"
+Testing for GMart contract - "./contract/Dmarket.sol"
 */
-let GMart = artifacts.require("GMart");
+let Dmarket = artifacts.require("Dmarket");
 let catchRevert = require("./exceptionsHelpers.js").catchRevert;
 
-contract('GMart', accounts => {
+contract('Dmarket', accounts => {
 
     const [firstAccount, secondAccount] = accounts;
     const deposit = web3.utils.toBN("29a2241af62c0000");
     const withdrawAmount = web3.utils.toBN("1bc16d674ec80000");
     
     beforeEach(async () => {
-        instance = await GMart.new()
+        instance = await Dmarket.new()
     })
 
     /*
@@ -23,7 +23,6 @@ contract('GMart', accounts => {
 
     // Set an Owner
     it("...sets an owner", async () => {
-        // const instance = await GMart.new();
         assert.equal(await instance.owner.call(), firstAccount, "Should set an owner.");
     });
 

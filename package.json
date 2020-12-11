@@ -1,7 +1,6 @@
 {
-  "name": "consensys_finalProject",
+  "name": "truffleUnbox",
   "version": "1.0.0",
-  "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -9,18 +8,12 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/bobeu/consensys-finalProject.git"
-  },
-  "bugs": {
-    "url": "https://github.com/bobeu/consensys-finalProject/issues"
-  },
-  "homepage": "https://github.com/bobeu/consensys-finalProject#readme",
   "directories": {
     "test": "test"
   },
   "dependencies": {
-    "openzeppelin-solidity": "^3.2.0"
-  }
+    "@openzeppelin/contracts": "^3.3.0"
+  },
+  "devDependencies": {},
+  "description": ""
 }
