@@ -9,3 +9,5 @@ Anyone with an ethereum account can buy from Dmarket using the native cryptocurr
 Dmarket does not feature a third party library but uses an extended contract that passes token functionality down to it. Also, to avoid a common attack known to be "integer overflow and underflow", Dmarket implemented a logic that checks for underflow or overflow before a function call is executed.
 
 I have also used a few modifiers to avoid known backdoors such as bad actors trying to highjack ownership, denial of service attack, token theft(account will be frozen) plus a few others.
+
+To reduce gas cost, I have try to minimize storage by using mapping instead, although this can be optimized better.
