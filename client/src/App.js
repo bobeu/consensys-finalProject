@@ -5,12 +5,13 @@ import getWeb3 from "./getWeb3";
 import "./App.css";
 
 class App extends Component {
-  state = { storageValue: 0, web3: null, accounts: null, contract: null };
+  state = {address: null, response: null, web3: null, accounts: null, contract: null };
 
   componentDidMount = async () => {
     try {
       // Get network provider and web3 instance.
       const web3 = await getWeb3();
+      const contractsDetail = new web3.eth.Contract(jsonInterface[, address][, options]);
 
       // Use web3 to get the user's accounts.
       const accounts = await web3.eth.getAccounts();
@@ -37,15 +38,23 @@ class App extends Component {
 
   runExample = async () => {
     const { accounts, contract } = this.state;
+    const admin = "0x7624269a420c12395B743aCF327A61f91bd23b84";
+    // const contract_Address = getWeb3.Contract(contract);
+    console.log(admin, accounts);
+
+    // const deposit = web3.utils.toBN("29a2241af62c0000");
+    // const withdrawAmount = web3.utils.toBN("1bc16d674ec80000");
 
     // Stores a given value, 5 by default.
-    await contract.methods.set(5).send({ from: accounts[0] });
+    await contract.methods.addAdmin(admin).send({ from: accounts[0]});
 
     // Get the value from the contract to prove it worked.
-    const response = await contract.methods.get().call();
-
+    const adminStatus = await contract.methods.isAdmin.call(admin, 1);
     // Update state with the result.
-    this.setState({ storageValue: response });
+    if(adminStatus) {
+      this.setState({address: admin, response: adminStatus });
+    }
+    this.setState({res: "The transaction failed"});    
   };
 
   render() {
@@ -54,17 +63,11 @@ class App extends Component {
     }
     return (
       <div className="App">
-        <h1>Good to Go!</h1>
-        <p>Your Truffle Box is installed and ready.</p>
-        <h2>Smart Contract Example</h2>
+        <h1>Example contract!</h1>
         <p>
-          If your contracts compiled and migrated successfully, below will show
-          a stored value of 5 (by default).
+          Adding an admin to the storefront...
         </p>
-        <p>
-          Try changing the value stored on <strong>line 40</strong> of App.js.
-        </p>
-        <div>The stored value is: {this.state.storageValue}</div>
+        <div>The status of account address: {this.state.address} is set to: {this.state.storageValue}</div>
       </div>
     );
   }
