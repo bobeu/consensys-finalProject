@@ -1,10 +1,12 @@
-Online marketplace that operates on the blockchain.
-The marketplace is central which consist of a list of stores where shoppers can purchase goods posted by the store owners. 
+Dmarkey is an Online marketplace that operates on the blockchain.
+It consists of a list of stores where shoppers can purchase goods posted by the store owners. 
 It is managed by a group of administrators who are permitted to add store owners to add stores to the marketplace. 
 The Store owners are able to add items to their stores, manage store’s inventory and funds while the Shoppers can visit 
      the stores and purchase goods that are in stock using a native cryptocurrency of the platform.
      
-To test this Dapps, you can either use remix or truffle or any compatible IDE.
+Front-end implementation is in progress. Before then, you can interact with this contract following these steps:
+
+You may use remix or truffle or any compatible IDE.
   Using Remix:
     - Visit remix.org
     - Create a file with .sol extension and paste the code.
