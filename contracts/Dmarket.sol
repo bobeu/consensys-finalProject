@@ -220,6 +220,9 @@ contract Dmarket is TokenERC20{
     // Notifies clients about the amount burnt
     event Burn(address indexed from, uint256 value);
     
+       // List of admins --> fixed
+    address[] public admins;
+
     mapping(address => mapping(uint => bool)) public  isAdmin; //Admins approval
     mapping(address => bool) public adminApprovalToAdd; //Admin approval to add storeOwner
     mapping(address => mapping(uint => bool)) public isStoreOwnerApproved; // Approvals for storeOwner
@@ -279,10 +282,15 @@ contract Dmarket is TokenERC20{
      * function is called only by the authorized owner address
      */
     function addAdmin(address _addr) public onlyOwner returns(bool){
-        require(adminCount <= 3, "Max admin reached --> [3]");
+        require(admins.length <= 3, "Max admin reached --> [3]");
         require(_addr != address(0), "Invalid address");
         uint id = adminCount + 1;
+        for (uint k = 0 ; k < admins.length; k++) {
+            require(isAdmin[_addr][k] == false);
+        }
         isAdmin[_addr][id] = true;
+        adminApprovalToAdd[_addr] = false;
+        admins.push(_addr);
         adminCount += 1;
         emit NewAdmin(_addr);
         return isAdmin[_addr][id];
@@ -303,8 +311,8 @@ contract Dmarket is TokenERC20{
     
     function approve_StoreOwner(address _addr, uint _id) public onlyAdmin(_id) returns(bool) {
         require(_addr != address(0), "Invalid address");
-        // StoreOwners memory _ownerStruct = storeOwnerMap[_addr];
         uint256 id = storeOwnersCount + 1;
+        require(isStoreOwnerApproved[_addr][id] == false, "Already approved");
         isStoreOwnerApproved[_addr][id] = true;
         storeOwnersCount += 1;
         emit ApprovedStoreOwner(_addr, id);
@@ -314,11 +322,11 @@ contract Dmarket is TokenERC20{
     function changeAdminApproval(address _addr, bool _approval, uint _id) public onlyOwner returns(bool) {
         require(isAdmin[_addr][_id] == true, "Not already added");
         if(_approval == true){
-            adminApprovalToAdd[_addr] = true;
-            return true;
+            require(adminApprovalToAdd[_addr] == false, "Already approved");
+            return adminApprovalToAdd[_addr] = _approval;
         } else if(_approval == false){
-            adminApprovalToAdd[_addr] = false;
-            return false;
+            require(adminApprovalToAdd[_addr] == true, "Not yet approved");
+            return adminApprovalToAdd[_addr] = false;
         }
     }
     
