@@ -29,10 +29,8 @@ contract('Dmarket', accounts => {
     // Add an admin to the list
     it("...should add an admin to the admin List.", async () => {
         await instance.addAdmin(accounts[1]);
-        const result_1 = await instance.checkIsAdmin(accounts[1], 1);
-        const result_2 = await instance.isAdmin.call(accounts[1], 1);
-        assert.equal(result_1, true, "Should return true when an admin is added");
-        assert.equal(result_2, true, "Should return true when an admin is added");
+        const result = await instance.isAdmin.call(accounts[1], 1);
+        assert.equal(result, true, "Should return true when an admin is added");
         assert.equal(await instance.adminCount.call(), 1, "Admin count should equal 1...");
     });
 
@@ -58,7 +56,7 @@ contract('Dmarket', accounts => {
     // It should return false if the checkIdAdmincanAdd() is called
     it("...should return false if admin is added.", async () => {
         await instance.addAdmin(secondAccount);
-        const expected = await instance.checkIfAdmincanAdd(secondAccount);
+        const expected = await instance.adminApprovalToAdd.call(secondAccount);
         assert.equal(expected, false, 'Should return true ');
     });
 
@@ -66,7 +64,7 @@ contract('Dmarket', accounts => {
     it("...should change an admin approval to add.", async () => {
         await instance.addAdmin(secondAccount);
         await instance.changeAdminApproval(secondAccount, true, 1);
-        const expected = await instance.checkIfAdmincanAdd(secondAccount);
+        const expected = await instance.adminApprovalToAdd.call(secondAccount);
         assert.equal(expected, true, "The approval should change to true.");
     });
 
@@ -75,7 +73,7 @@ contract('Dmarket', accounts => {
         await instance.addAdmin(secondAccount);
         await instance.changeAdminApproval(secondAccount, true, 1);
         await instance.approve_StoreOwner(accounts[3], 1, {from: secondAccount});
-        let result = await instance.checkStoreOwnerApproved(accounts[3], 1, {from: accounts[3]});
+        let result = await instance.isStoreOwnerApproved.call(accounts[3], 1, {from: accounts[3]});
         assert.equal(result, true, "Should return true when storeOwner is approved");
         assert.equal(await instance.storeOwnersCount.call(), 1, "StoreOwners count should equal 1...");
     });
@@ -86,7 +84,7 @@ contract('Dmarket', accounts => {
         await instance.changeAdminApproval(secondAccount, true, 1);
         await instance.approve_StoreOwner(accounts[3], 1, {from: secondAccount});
         await instance.changeStoreOwnerApproval(accounts[3], false, 1, 1, {from: secondAccount});
-        let result = await instance.checkStoreOwnerApproved(accounts[3], 1, {from: accounts[3]});
+        let result = await instance.isStoreOwnerApproved.call(accounts[3], 1, {from: accounts[3]});
         assert.equal(result, false, "Should return false when storeOwner approved is false");
     });
 
@@ -96,7 +94,7 @@ contract('Dmarket', accounts => {
         await instance.changeAdminApproval(secondAccount, true, 1);
         await instance.approve_StoreOwner(accounts[3], 1, {from: secondAccount});
         await instance.addStorefront("Store 1", 1, {from: accounts[3]});
-        assert.equal(await instance.ifStoreExist.call("Store 1", 1, {from: firstAccount}), true, "Should return true when storefront is added");
+        assert.equal(await instance.storeExist.call("Store 1", 1, {from: firstAccount}), true, "Should return true when storefront is added");
     });
 
     // StoreOWner should be able to add items to added store(s)

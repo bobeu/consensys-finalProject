@@ -15,7 +15,7 @@ contract TestDmarket {
 
   function testCheckIsAdminFail() public {
     // GMart gmartInstance = GMart(DeployedAddresses.GMart());
-    bool result = dmartInstance.checkIsAdmin(admin, 1);
+    bool result = dmartInstance.isAdmin(admin, 1);
     Assert.equal(result, false, "Should fail and return false");
   }
 

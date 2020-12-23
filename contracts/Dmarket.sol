@@ -229,9 +229,11 @@ contract Dmarket is TokenERC20{
     mapping(address => mapping(uint256 => bytes)) public storefrontRef; //List of storefront refrences/IDs
     // References to store with Items
     mapping(address => mapping(string => mapping(string => mapping(uint => bytes)))) public storefrontRefItemMap;
+    // Check existence of a storefront using StoreName and storeNumber
     mapping(string => mapping(uint => bool)) public storeExist; //Check for storefront existence
     mapping(uint => bytes) public itemsList; //List of items
-    mapping(address => bool) public ownerShip; //Ownership of items
+    // Onwership of an item. Get by passing an address with item's number
+    mapping(address => mapping(uint => bool)) public ownerShip; //Ownership of items
     mapping(string => mapping(uint => address)) public storeOwners;//List of stores with owners
     mapping(uint => bool) public availableItems; //List of items available for sale
     mapping(uint => uint) public itemBalance; //Item balance count
@@ -295,19 +297,6 @@ contract Dmarket is TokenERC20{
         emit NewAdmin(_addr);
         return isAdmin[_addr][id];
     }
-
-    // 
-    function checkIsAdmin(address _addr, uint _id) public view returns(bool) {
-        return (isAdmin[_addr][_id]);
-    }
-
-    function checkIfAdmincanAdd(address _addr) public view returns(bool) {
-        return(adminApprovalToAdd[_addr]);
-    }
-
-    function checkStoreOwnerApproved(address _addr, uint256 _id) public view returns(bool) {
-        return isStoreOwnerApproved[_addr][_id];
-    }
     
     function approve_StoreOwner(address _addr, uint _id) public onlyAdmin(_id) returns(bool) {
         require(_addr != address(0), "Invalid address");
@@ -319,6 +308,7 @@ contract Dmarket is TokenERC20{
         return true;
     }
     
+    // Update an admin approval to add storeowner
     function changeAdminApproval(address _addr, bool _approval, uint _id) public onlyOwner returns(bool) {
         require(isAdmin[_addr][_id] == true, "Not already added");
         if(_approval == true){
@@ -330,6 +320,7 @@ contract Dmarket is TokenERC20{
         }
     }
     
+    // Update storeowner approval to add store and items
     function changeStoreOwnerApproval(
         address _addr,
         bool _approval,
@@ -366,14 +357,6 @@ contract Dmarket is TokenERC20{
          emit NewStoreFront(msg.sender, _storeName, _storeNumber);
          return (_storeName, _storeNumber);
         
-     }
-
-    function ifStoreExist(string memory _name, uint _storeNumber) public view returns(bool) {
-        if(storeExist[_name][_storeNumber]){
-            return true;
-        }else{
-            return false;
-        }
      }
      
     function getStoreOwner(string memory _name, uint _id) public view returns(address) {
@@ -413,7 +396,7 @@ contract Dmarket is TokenERC20{
                 _seller
                 );
                 storefrontRefItemMap[msg.sender][_storeName][_itemName][itemNumber] = _itemref;
-                ownerShip[msg.sender] = true;
+                ownerShip[msg.sender][itemNumber] = true;
                 availableItems[itemNumber] = true;
                 itemsList[itemNumber] = _itemref;
                 itemBalance[itemNumber] = _qnty;
@@ -482,8 +465,8 @@ contract Dmarket is TokenERC20{
                 require(_offer >= amountToPay, "Amount cannot be less than total price");
                 balanceOf[msg.sender] -= amountToPay;
                 balanceOf[sellerAddress] += amountToPay;
-                ownerShip[sellerAddress] = false;
-                ownerShip[msg.sender] = true;
+                ownerShip[sellerAddress][_itemNumber] = false;
+                ownerShip[msg.sender][_itemNumber] = true;
                 quantity -= _qnty;
                 if(quantity == 0){
                     availableItems[_itemNumber] = false;
